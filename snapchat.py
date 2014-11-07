@@ -49,6 +49,7 @@ class Snapchat:
 		if username is not None and password is not None:
 			self.login(username, password)
 
+	# Snapchat uses some weird method to derive their authentication token
 	def _pad(self, data, blocksize=16):
 		pad = blocksize - (len(data) % blocksize)
 		return data + chr(pad) * pad
@@ -74,12 +75,17 @@ class Snapchat:
 		data = self._pad(data)
 		return self.cipher.decrypt(data)
 
-	def _timestamp(self):
-		return int(time.time() * 1000)
-
+	# convenience method to get a request_token
 	def _tokenize(self, params):
 		return self._hash(params[0], params[1])
 
+	# get time in microseconds
+	def _timestamp(self):
+		return int(time.time() * 1000)
+
+	# get the media type in human-readable format
+	# set binary to True if passing in a data stream
+	# set binary to False if passing in a media type (int) 
 	def media_type(self, media, binary=True):
 		if binary:
 			if media[0] == chr(0xff) and media[1] == chr(0xd8):
@@ -96,6 +102,7 @@ class Snapchat:
 
 		return None
 
+	# get the integer representing the type of media of a file
 	def media_type_num(self, media):
 		if media[0] == chr(0xff) and media[1] == chr(0xd8):
 			return Snapchat.MEDIA_IMAGE
@@ -105,16 +112,20 @@ class Snapchat:
 
 		return -1
 	
+	# send a POST request to Snapchat's backend with the given data/params/file
 	def api_post(self, endpoint, data, params, upload_file = None):
 		data['req_token'] = self._tokenize(params);
 		headers = {'User-Agent': Snapchat.USERAGENT}
 		url = Snapchat.URL + endpoint
 
+		# upload file in multipart request if necessary
+		# verify is set to False for debugging purposes with Fiddler
 		if upload_file is not None:
 			r = requests.post(url, data, headers=headers, files={'data': upload_file}, verify=False)
 		else:
 			r = requests.post(url, data, headers=headers, verify=False)
 
+		# check for HTTP 200 OK status, anything else means error
 		if r.status_code != 200:
 			print url
 			print data
@@ -122,21 +133,33 @@ class Snapchat:
 			print r.content
 			return None
 
+		# attempt to parse response as JSON
 		try:
 			return json.loads(r.content)
 		except:
 			return r.content
 		
+	# send a GET request to Snapchat's backend with the given params
 	def api_get(self, endpoint, params):
 		url = Snapchat.URL + endpoint
 		headers = {'User-Agent': Snapchat.USERAGENT}
 		r = requests.get(url, params=params, headers=headers)
 
+		# check for HTTP 200 OK status, anything else means error
+		if r.status_code != 200:
+			print url
+			print data
+			print headers
+			print r.content
+			return None
+
+		# attempt to parse response as JSON
 		try:
 			return json.loads(r.content)
 		except:
 			return r.content
 
+	# log into Snapchat with the given credentials
 	def login(self, username, password):
 		timestamp = self._timestamp()
 		data = {
@@ -163,6 +186,8 @@ class Snapchat:
 
 		return result
 
+	# get all updates for this user (including snaps, stories,
+	# chat messages, friend list, etc)
 	def get_updates(self):
 		if not self.logged_in:
 			return False
@@ -180,6 +205,7 @@ class Snapchat:
 		result = self.api_post('loq/all_updates', data, params)
 		return result
 
+	# send a snap with the given media type, recipients and view time
 	def send_snap(self, filename, recipients, media_type=None, time=10):
 		if not self.logged_in:
 			return False 
@@ -233,6 +259,7 @@ class Snapchat:
 		result = self.api_post('loq/send', data, params)
 		return result['snap_response']['success'] 
 
+	# retrieve a snap from Snapchat with the given ID
 	def get_snap(self, snap_id):
 		if not self.logged_in:
 			return False
@@ -249,6 +276,7 @@ class Snapchat:
 		if result is None:
 			return False
 
+		# if it's decrypted already, just return
 		if self.media_type(result) is not None:
 			return result
 
@@ -259,6 +287,7 @@ class Snapchat:
 
 		return False
 
+	# get a JSON formatted list of all pending snaps for a user
 	def get_snaps(self):
 		updates = self.get_updates()
 		if updates is None or not updates:
