@@ -314,3 +314,19 @@ class Snapchat:
                 result.append(snap_readable)
 
         return result
+
+    def mark_read(self, snap):
+        if not self.logged_in:
+            return False
+
+        timestamp = self._timestamp()
+        data = {
+            'json': '{{\"{0}\": {{\"t\":{1}, \"sv\":{2}}}}}'.format(snap['id'], timestamp - snap['time'], snap['time']),
+            'timestamp': timestamp,
+            'username': self.username
+        }
+
+        params = [self.auth_token, timestamp]
+        result = self.api_post('bq/update_snaps', data, params)
+        
+        return result is not None
