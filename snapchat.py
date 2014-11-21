@@ -128,6 +128,8 @@ class Snapchat:
 
         # check for HTTP 200 OK status, anything else means error
         if r.status_code != 200:
+            '''
+            '''
             print url
             print data
             print headers
@@ -149,6 +151,8 @@ class Snapchat:
 
         # check for HTTP 200 OK status, anything else means error
         if r.status_code != 200:
+            '''
+            '''
             print url
             print headers
             print r.content
@@ -188,6 +192,28 @@ class Snapchat:
         else:
             return False
 
+        return result
+
+    # Login with a pre-existing authentication token.
+    def login_token(self, username, auth_token):
+        self.logged_in = True
+        self.auth_token = auth_token
+        timestamp = self._timestamp()
+        self.username = username
+        data = {
+            'timestamp': timestamp,
+            'username': self.username,
+            'checksum': ''
+        }
+        params = [
+            self.auth_token,
+            timestamp
+        ]
+        result = self.api_post('loq/all_updates', data, params)
+        if not result:
+            self.logged_in = False
+            self.auth_token = None
+            return False
         return result
 
     # get all updates for this user (including snaps, stories,
@@ -330,3 +356,7 @@ class Snapchat:
         result = self.api_post('bq/update_snaps', data, params)
         
         return result is not None
+
+    @property
+    def auth_token(self):
+        return self.auth_token

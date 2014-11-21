@@ -25,12 +25,18 @@ def cli():
     if not sys.platform.startswith('win'):
         password = getpass.getpass('Please enter password: ')
     else:
-        password = raw_input('Please enter password: ')
-
-    if not s.login(username, password):
-        print 'Invalid username/password combo'
-        clear()
-        exit()
+        password = raw_input('Please enter password (empty for token entry): ')
+    if password == '':
+        auth_token = raw_input('Please enter auth token: ')
+        if not s.login_token(username, auth_token):
+            raw_input('Invalid username/auth token combo')
+            clear()
+            exit()
+    else:
+        if not s.login(username, password):
+            raw_input('Invalid username/password combo')
+            clear()
+            exit()
 
     pynotify.init("pySnap")
     queue = Queue.Queue()
@@ -48,10 +54,13 @@ def cli():
     clear()
     while user_input != 'X':
         print 'Welcome to Snapchat!'
+        print 'Logged in as {0} (token {1})'.format(username, s.auth_token)
         print
         print '{0} pending snaps:'.format(len(snaps))
         num = 1
         for snap in snaps:
+            #print snap
+            #print snap['media_type']
             dt = datetime.fromtimestamp(snap['sent'] / 1000)
             ext = s.media_type(snap['media_type'], binary=False)
             timestamp = str(snap['sent']).replace(':', '-')
@@ -129,14 +138,14 @@ def cli():
             while not queue.empty():
                 buf = queue.get()
             new_snaps = []
-            for s in buf:
+            for st in buf:
                 found = False
                 for snap in snaps:
-                    if s['id'] == snap['id']:
+                    if st['id'] == snap['id']:
                         found = True
                         break
                 if found == True:
-                    new_snaps.append(s)
+                    new_snaps.append(st)
             for snap in new_snaps:
                 title = 'New snap from {0}!'.format(snap['sender'])
                 dt = datetime.fromtimestamp(snap['sent'] / 1000)
