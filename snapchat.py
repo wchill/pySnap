@@ -360,3 +360,15 @@ class Snapchat:
     @property
     def auth_token(self):
         return self.auth_token
+
+    @property
+    def friends(self):
+        if not self.logged_in:
+            return None
+        update = self.get_updates()
+        if not update:
+            return None
+        friend_list = []
+        for f in update['updates_response']['friends']:
+            friend_list.append(f['name'])
+        return friend_list
