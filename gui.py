@@ -139,20 +139,33 @@ class GUI:
         for name in recipients:
             recipient_list.insert(END, name)
         recipient_list.pack(fill=BOTH, expand=1)
+        timer_panel = PanedWindow(w)
+        timer_panel.pack(fill=BOTH, expand=1)
+        Label(timer_panel, text='Send delay (s):').pack(side=LEFT)
+        timer_spinbox = Spinbox(timer_panel, from_=0, to=3600, width=6, repeatdelay=200, repeatinterval=5)
+        timer_spinbox.pack(side=RIGHT)
         panel = PanedWindow(w)
         panel.pack()
-        ok_btn = Button(panel, text=' OK ', command=lambda: self.send_to_recipients(w, recipients, recipient_list.curselection(), path))
+        ok_btn = Button(panel, text=' OK ', command=lambda: self.send_to_recipients(w, recipients, recipient_list.curselection(), path, timer_spinbox.get()))
         ok_btn.pack(side=LEFT)
         cancel_btn = Button(panel, text=' Cancel ', command=w.destroy)
         cancel_btn.pack(side=RIGHT)
 
-    def send_to_recipients(self, w, friends, selected, path):
+    def send_to_recipients(self, w, friends, selected, path, timer_time):
         w.destroy()
         recipient_list = []
         for f in selected:
             recipient_list.append(friends[f])
+        if timer_time == 0:
+            self.send_helper(path, recipient_list)
+        else:
+            self.window.after(int(timer_time) * 1000, lambda: self.send_helper(path, recipient_list))
+
+    def send_helper(self, path, recipient_list):
         if self.client.send_snap(path, recipient_list):
             tkMessageBox.showinfo('Send successful', 'Sent {0} to {1} recipient(s)'.format(path, len(recipient_list)))
+        else:
+            tkMessageBox.showinfo("Failed to send", "An error occurred")
 
     def open_snap(self, snap):
         dt = datetime.fromtimestamp(snap['sent'] / 1000)
